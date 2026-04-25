@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Serena Bolton — Portrait &amp; Brand Photographer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="colors_and_type.css?v=3">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: #F5F0E8; overflow-x: hidden; }
+  #root { min-height: 100vh; }
+  ::selection { background: rgba(234,228,215,0.25); color: var(--sc-black); }
+
+  /* Scroll-triggered fade-in */
+  .sb-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s cubic-bezier(0.22,0.61,0.36,1),
+                transform 0.7s cubic-bezier(0.22,0.61,0.36,1);
+  }
+  .sb-reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .parallax-img {
+    will-change: transform;
+    transition: transform 0.1s linear;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="sb-components.jsx"></script>
+<script type="text/babel" src="sb-sections.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "heroSize": "large",
+  "accentColor": "warm",
+  "pinnedLayout": "split"
+}/*EDITMODE-END*/;
+
+// ─── Scroll reveal observer ───
+
+function useReveal() {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            obs.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    const els = ref.current.querySelectorAll('.sb-reveal');
+    els.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+function App() {
+  const tweaks = useTweaks(TWEAK_DEFAULTS);
+  const appRef = useReveal();
+
+  // Micro parallax for collage images
+  useEffect(() => {
+    const onScroll = () => {
+      const imgs = document.querySelectorAll('.parallax-img');
+      imgs.forEach(img => {
+        const speed = parseFloat(img.dataset.speed) || 0.03;
+        const rect = img.getBoundingClientRect();
+        const center = rect.top + rect.height / 2;
+        const vh = window.innerHeight;
+        const offset = -(center - vh / 2) * speed;
+        img.style.transform = `translateY(${offset}px)`;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <div ref={appRef}>
+      <SBNav />
+      <SBHero tweaks={tweaks} />
+
+      <div className="sb-reveal">
+        <SBPinnedSections tweaks={tweaks} />
+      </div>
+
+      <SBStackingCards tweaks={tweaks} />
+
+
+      <div className="sb-reveal">
+        <SBAbout tweaks={tweaks} />
+      </div>
+
+      <div className="sb-reveal">
+        <SBJournal tweaks={tweaks} />
+      </div>
+
+      <SBFooter tweaks={tweaks} />
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Hero">
+          <TweakRadio
+            label="Headline size"
+            tweakKey="heroSize"
+            options={[
+              { label: 'Large', value: 'large' },
+              { label: 'Compact', value: 'compact' },
+            ]}
+            value={tweaks.heroSize}
+            onChange={(v) => tweaks.set({ heroSize: v })}
+          />
+        </TweakSection>
+        <TweakSection title="Colour">
+          <TweakRadio
+            label="Accent tone"
+            tweakKey="accentColor"
+            options={[
+              { label: 'Warm neutral', value: 'warm' },
+              { label: 'Cool slate', value: 'cool' },
+              { label: 'Dark forest', value: 'forest' },
+            ]}
+            value={tweaks.accentColor}
+            onChange={(v) => tweaks.set({ accentColor: v })}
+          />
+        </TweakSection>
+        <TweakSection title="Layout">
+          <TweakRadio
+            label="Pinned sections"
+            tweakKey="pinnedLayout"
+            options={[
+              { label: 'Split (image + text)', value: 'split' },
+              { label: 'Full-bleed image', value: 'fullbleed' },
+            ]}
+            value={tweaks.pinnedLayout}
+            onChange={(v) => tweaks.set({ pinnedLayout: v })}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
